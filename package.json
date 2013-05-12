@@ -1,0 +1,28 @@
+{
+	"name"                : "TubeJS",
+	"description"         : "asynchronous Concurrent messaging",
+	"version"             : "0.0.1",
+	"keywords"            : [
+		"tubeJS",
+		"asynchronous",
+		"concurrent",
+		"messaging",
+		"scala",
+		"actors"
+	],
+	"author"              : {
+		"name" : "Evangelos Pappas",
+		"email": "epappas@evalonlabs.com",
+		"url"  : "evalonlabs.com"
+	},
+	"repository"          : {
+		"type": "git",
+		"url" : "git://github.com/BagosGiAr/TubeJS.git"
+	},
+	"main"                : "./index.js",
+	"dependencies"        : { },
+	"devDependencies"     : { },
+	"optionalDependencies": {},
+	"engine"              : "node >= 0.8.x",
+	"readmeFilename"      : "README.md"
+}
