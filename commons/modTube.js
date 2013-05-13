@@ -53,13 +53,14 @@ module.exports = (function (process) {
 
 	/**
 	 *
+	 * @param callback
 	 * @returns {*}
 	 * @constructor
 	 */
-	function Tube() {
+	function Tube(callback) {
 		//this.messageQueue = [];
 		this.wractors = {};
-
+		this.callback = callback || (function(){});
 		return this;
 	}
 
@@ -115,7 +116,32 @@ module.exports = (function (process) {
 	 */
 	Tube.prototype.handle = function (message) {
 		switch (message.type) {
+			case -2: // Actor Exit
+				this.callback.call(this, message);
+				break;
+			case -1: // Actor Error
+				this.callback.call(this, message);
+				break;
+			case 0: // Actor Message
+				this.callback.call(this, message);
+				break;
+			case 1: // Actor Message NOR
+				this.callback.call(this, message);
+				break;
+			case 2: // Actor REQ
+				this.callback.call(this, message);
+				break;
+			case 3: // DIE a die notification (it self or other)
+				this.callback.call(this, message);
+				break;
+			case 4: // CMP Control message ping
+				this.callback.call(this, message);
+				break;
+			case 5: // CMD Actor's Command to master
+				this.callback.call(this, message);
+				break;
 			default:
+				this.callback.call(this, message);
 				break;
 		}
 		return this;
