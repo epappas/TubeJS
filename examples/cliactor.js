@@ -10,4 +10,4 @@ module.exports = function(wractor, name, path) {
 		console.log("Child Received: ", sender, message, type);
 		wractor.send(sender, message);
 	});
-}
+};

@@ -6,7 +6,7 @@ module.exports = (function (process) {
 
 //	var MESSAGE_TYPES = [
 //		"TRX", // Transactional
-//		"NOR", // No Response
+//		"NOR", // No Response - rumor
 //		"REQ", // Request a message
 //		"DIE", // a die notification (it self or other)
 //		"CMP", // Control message ping
@@ -34,7 +34,71 @@ module.exports = (function (process) {
 				}
 				return tube;
 			},
-			query: function (target, query, callback) {
+			rumor: function (msg, callback) {
+				var message = {
+					sender: null,
+					sendee: name,
+					value : msg,
+					type  : 1 // NOR
+				};
+				spawned.send(JSON.stringify(message));
+				if (typeof callback === "function") {
+					process.nextTick(callback.bind(null, message));
+				}
+				return tube;
+			},
+			query: function (sender, query, callback) {
+				var message = {
+					sender: sender,
+					sendee: name,
+					value : query,
+					type  : 2 // REQ
+				};
+				spawned.send(JSON.stringify(message));
+				if (typeof callback === "function") {
+					process.nextTick(callback.call(null, message));
+				}
+				return tube;
+			},
+			die  : function (sender, message, callback) {
+				var message = {
+					sender: sender,
+					sendee: name,
+					value : message,
+					type  : 3 // DIE
+				};
+				spawned.send(JSON.stringify(message));
+				if (typeof callback === "function") {
+					process.nextTick(callback.call(null, message));
+				}
+				return tube;
+			},
+			ping : function (sender, callback) {
+				var message = {
+					sender: sender,
+					sendee: name,
+					value : "PING " + Date.now(),
+					type  : 4 // CMP
+				};
+				spawned.send(JSON.stringify(message));
+				if (typeof callback === "function") {
+					process.nextTick(callback.call(null, message));
+				}
+				return tube;
+			},
+			exec : function (sender, command, args, callback) {
+				if (typeof arg !== "object" && typeof args === "function" && !callback)
+					callback = args;
+				var message = {
+					sender: sender,
+					sendee: name,
+					value : JSON.stringify({
+						command: command,
+						args   : args
+					}),
+					type  : 5 // CMP
+				};
+				spawned.send(JSON.stringify(message));
 				if (typeof callback === "function") {
 					process.nextTick(callback.call(null, message));
 				}
@@ -60,7 +124,7 @@ module.exports = (function (process) {
 	function Tube(callback) {
 		//this.messageQueue = [];
 		this.wractors = {};
-		this.callback = callback || (function(){});
+		this.callback = callback || (function () {});
 		return this;
 	}
 
@@ -122,7 +186,7 @@ module.exports = (function (process) {
 			case -1: // Actor Error
 				this.callback.call(this, message);
 				break;
-			case 0: // Actor Message
+			case 0: // Actor Message TRX
 				this.callback.call(this, message);
 				break;
 			case 1: // Actor Message NOR
@@ -178,7 +242,11 @@ module.exports = (function (process) {
 		}));
 		child.on('message', this.emit.bind(this, "message", this.child));
 		child.on('data', this.emit.bind(this, "message", this.child));
+		child.on('request', this.emit.bind(this, "request", this.child));
+		child.on('ping', this.emit.bind(this, "ping", this.child));
+		child.on('command', this.emit.bind(this, "command", this.child));
 		child.on('error', this.emit.bind(this, "error", this.child));
+		child.on('die', this.emit.bind(this, "exit", this.child));
 		child.on('exit', this.emit.bind(this, "exit", this.child, path));
 		child.on('close', this.emit.bind(this, "exit", this.child, path));
 		for (var fd in child.stdio) {

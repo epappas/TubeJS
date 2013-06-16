@@ -1,5 +1,5 @@
 {
-	"name"                : "TubeJS",
+	"name"                : "tubejs",
 	"description"         : "asynchronous Concurrent messaging",
 	"version"             : "0.0.1",
 	"keywords"            : [
