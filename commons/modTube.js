@@ -1,16 +1,22 @@
 var childP = require('child_process');
 var wractorJs = require.resolve('./wractor.js');
 var events = require('events');
+var uuid = require("../commons/modUUID.js");
 
 module.exports = (function (process) {
 
+	var hex = uuid(16);
+	var hexUuid = new hex('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
 //	var MESSAGE_TYPES = [
 //		"TRX", // Transactional
 //		"NOR", // No Response - rumor
 //		"REQ", // Request a message
 //		"DIE", // a die notification (it self or other)
 //		"CMP", // Control message ping
-//		"CMD" // Command
+//		"CMD", // Command
+//		"SPN", // Spawn command
+//		"TUB", // Tube command
+//		"REP" // Reply message
 //	];
 	var Wractor = (function (name) {
 
@@ -18,95 +24,192 @@ module.exports = (function (process) {
 		var spawned = tube.wractors[name];
 
 		var __self = {
-			self : function () {
+			self  : function () {
 				return spawned;
 			},
-			send : function (sender, msg, callback) {
-				var message = {
-					sender: sender,
-					sendee: name,
-					value : msg,
-					type  : 0 // TRX
-				};
-				spawned.send(JSON.stringify(message));
-				if (typeof callback === "function") {
-					process.nextTick(callback.bind(null, message));
+			handle: function (message) {
+				switch (message.type) {
+					case 0: // Actor Message TRX
+						this.send(message.sender, message.value);
+						break;
+					case 1: // Actor Message NOR
+						this.rumor(message.sender, message.value);
+						break;
+					case 2: // Actor REQ
+						this.query(message.sender, message.value);
+						break;
+					case 3: // DIE a die notification (it self or other)
+						this.die(message.sender, message.value);
+						break;
+					case 4: // CMP Control message ping
+						this.ping(message.sender, message.value);
+						break;
+					case 5: // CMD Actor's Command to master
+						this.exec(message.sender, message.value);
+						break;
+					case 6: // SPN
+						this.spawn(message.sender, message.value);
+						break;
+					case 7: // TUB
+						this.tube(message.sender, message.value);
+						break;
+					case 8: // REP
+						this.reply(message.sender, message.value);
+						break;
+					default:
+						this.send(message.sender, message.value);
+						break;
 				}
 				return tube;
 			},
-			rumor: function (msg, callback) {
+			send  : function (sender, msg, callback) {
+				var mId = hexUuid.get();
 				var message = {
-					sender: null,
-					sendee: name,
-					value : msg,
-					type  : 1 // NOR
+					messageId: mId,
+					sender   : (sender || "master"),
+					sendee   : name,
+					value    : msg,
+					type     : 0 // TRX
 				};
 				spawned.send(JSON.stringify(message));
 				if (typeof callback === "function") {
-					process.nextTick(callback.bind(null, message));
+					process.nextTick(callback.bind(null, mId, name, message));
 				}
 				return tube;
 			},
-			query: function (sender, query, callback) {
+			rumor : function (msg, callback) {
+				var mId = hexUuid.get();
 				var message = {
-					sender: sender,
-					sendee: name,
-					value : query,
-					type  : 2 // REQ
+					messageId: mId,
+					sender   : null,
+					sendee   : name,
+					value    : msg,
+					type     : 1 // NOR
 				};
 				spawned.send(JSON.stringify(message));
 				if (typeof callback === "function") {
-					process.nextTick(callback.call(null, message));
+					process.nextTick(callback.bind(null, mId, name, message));
 				}
 				return tube;
 			},
-			die  : function (sender, message, callback) {
+			query : function (sender, query, callback) {
+				var mId = hexUuid.get();
 				var message = {
-					sender: sender,
-					sendee: name,
-					value : message,
-					type  : 3 // DIE
+					messageId: mId,
+					sender   : (sender || "master"),
+					sendee   : name,
+					value    : query,
+					type     : 2 // REQ
 				};
 				spawned.send(JSON.stringify(message));
 				if (typeof callback === "function") {
-					process.nextTick(callback.call(null, message));
+					process.nextTick(callback.call(null, mId, name, message));
 				}
 				return tube;
 			},
-			ping : function (sender, callback) {
+			die   : function (sender, message, callback) {
+				var mId = hexUuid.get();
 				var message = {
-					sender: sender,
-					sendee: name,
-					value : "PING " + Date.now(),
-					type  : 4 // CMP
+					messageId: mId,
+					sender   : (sender || "master"),
+					sendee   : name,
+					value    : message,
+					type     : 3 // DIE
 				};
 				spawned.send(JSON.stringify(message));
 				if (typeof callback === "function") {
-					process.nextTick(callback.call(null, message));
+					process.nextTick(callback.call(null, mId, name, message));
 				}
 				return tube;
 			},
-			exec : function (sender, command, args, callback) {
+			ping  : function (sender, callback) {
+				var mId = hexUuid.get();
+				var message = {
+					messageId: mId,
+					sender   : (sender || "master"),
+					sendee   : name,
+					value    : "PING " + Date.now(),
+					type     : 4 // CMP
+				};
+				spawned.send(JSON.stringify(message));
+				if (typeof callback === "function") {
+					process.nextTick(callback.call(null, mId, name, message));
+				}
+				return tube;
+			},
+			exec  : function (sender, command, args, callback) {
 				if (typeof arg !== "object" && typeof args === "function" && !callback)
 					callback = args;
+				var mId = hexUuid.get();
 				var message = {
-					sender: sender,
-					sendee: name,
-					value : JSON.stringify({
+					messageId: mId,
+					sender   : (sender || "master"),
+					sendee   : name,
+					value    : JSON.stringify({
 						command: command,
 						args   : args
 					}),
-					type  : 5 // CMP
+					type     : 5 // CMP
 				};
 				spawned.send(JSON.stringify(message));
 				if (typeof callback === "function") {
-					process.nextTick(callback.call(null, message));
+					process.nextTick(callback.call(null, mId, name, message));
 				}
 				return tube;
 			},
-			exit : function (callback) {
+			spawn : function (wractor, path, callback) {
+				var mId = hexUuid.get();
+				var message = {
+					messageId: mId,
+					sender   : "master",
+					sendee   : name,
+					value    : JSON.stringify({
+						wractor: wractor,
+						path   : path
+					}),
+					type     : 6 // SPN
+				};
+				spawned.send(JSON.stringify(message));
 				if (typeof callback === "function") {
-					process.nextTick(callback.call(null, message));
+					process.nextTick(callback.call(null, mId, name, message));
+				}
+				return tube;
+			},
+			tube  : function (name, wractor, callback) {
+				var mId = hexUuid.get();
+				var message = {
+					messageId: mId,
+					sender   : "master",
+					sendee   : name,
+					value    : JSON.stringify({
+						wractor: wractor
+					}),
+					type     : 7 // TUB
+				};
+				spawned.send(JSON.stringify(message));
+				if (typeof callback === "function") {
+					process.nextTick(callback.call(null, mId, name, message));
+				}
+				return tube;
+			},
+			reply : function (sender, message, callback) {
+				var mId = hexUuid.get();
+				var message = {
+					messageId: mId,
+					sender   : (sender || "master"),
+					sendee   : name,
+					value    : message,
+					type     : 8 // REP
+				};
+				spawned.send(JSON.stringify(message));
+				if (typeof callback === "function") {
+					process.nextTick(callback.call(null, mId, name, message));
+				}
+				return tube;
+			},
+			exit  : function (callback) {
+				if (typeof callback === "function") {
+					process.nextTick(callback.call(null));
 				}
 				return tube;
 			}
@@ -124,6 +227,10 @@ module.exports = (function (process) {
 	function Tube(callback) {
 		//this.messageQueue = [];
 		this.wractors = {};
+		this.handler = new events.EventEmitter();
+		if(typeof callback === "function") {
+			callback(this.handler);
+		}
 		this.callback = callback || (function () {});
 		return this;
 	}
@@ -169,7 +276,8 @@ module.exports = (function (process) {
 		if (typeof this.wractors[message.sendee] === "undefined") {
 			throw "Wractor " + message.sendee + " doesn't exist.";
 		}
-		Wractor.call(this, message.sendee).send(message.sender, message.value);
+		//Wractor.call(this, message.sendee).send(message.sender, message.value, message.type);
+		Wractor.call(this, message.sendee).handle(message);
 		return this;
 	};
 
@@ -181,31 +289,52 @@ module.exports = (function (process) {
 	Tube.prototype.handle = function (message) {
 		switch (message.type) {
 			case -2: // Actor Exit
-				this.callback.call(this, message);
+				this.handler.emit("aexit", message);
+				//this.callback.call(this, "aexit", message);
 				break;
 			case -1: // Actor Error
-				this.callback.call(this, message);
+				this.handler.emit("aerr", message);
+				//this.callback.call(this, "aerr", message);
 				break;
 			case 0: // Actor Message TRX
-				this.callback.call(this, message);
+				this.handler.emit("message", message);
+				//this.callback.call(this, "message", message);
 				break;
 			case 1: // Actor Message NOR
-				this.callback.call(this, message);
+				this.handler.emit("message", message);
+				//this.callback.call(this, "message", message);
 				break;
 			case 2: // Actor REQ
-				this.callback.call(this, message);
+				this.handler.emit("request", message);
+				//this.callback.call(this, "request", message);
 				break;
 			case 3: // DIE a die notification (it self or other)
-				this.callback.call(this, message);
+				this.handler.emit("die", message);
+				//this.callback.call(this, "die", message);
 				break;
 			case 4: // CMP Control message ping
-				this.callback.call(this, message);
+				this.handler.emit("ping", message);
+				//this.callback.call(this, "ping", message);
 				break;
 			case 5: // CMD Actor's Command to master
-				this.callback.call(this, message);
+				this.handler.emit("command", message);
+				//this.callback.call(this, "command", message);
+				break;
+			case 6: // SPN
+				this.handler.emit("spawn", message);
+				//this.callback.call(this, "spawn", message);
+				break;
+			case 7: // TUB
+				this.handler.emit("tube", message);
+				//this.callback.call(this, "tube", message);
+				break;
+			case 8: // REP
+				this.handler.emit("reply", message);
+				//this.callback.call(this, "reply", message);
 				break;
 			default:
-				this.callback.call(this, message);
+				this.handler.emit("unknown", message);
+				//this.callback.call(this, "unknown", message);
 				break;
 		}
 		return this;

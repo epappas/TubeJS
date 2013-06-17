@@ -1,4 +1,7 @@
+var uuid = require("../commons/modUUID.js");
 var events = require('events');
+var hex = uuid(16);
+var hexUuid = new hex('xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx');
 var mainFunc = null;
 
 var wrapper = (function (process) {
@@ -12,7 +15,8 @@ var wrapper = (function (process) {
 		this.afterMe = [];
 		this.children = [];
 		this.mailBox = {};
-		this.mailBoxQ = [];
+		//this.mailBoxQ = [];
+		this.lastMID = "";
 		return this;
 	}
 
@@ -30,31 +34,49 @@ var wrapper = (function (process) {
 	 */
 	Wrapper.prototype.handle = function (message) {
 		var obj = JSON.parse(message);
+		if (this.mailBox[obj.messageId]) {
+			var cb = this.mailBox[obj.messageId].callback;
+			cb(null, {
+				messageId: obj.messageId,
+				request  : this.mailBox[obj.messageId].message,
+				target   : this.mailBox[obj.messageId].target,
+				reply    : obj.value,
+				sender   : obj.sender
+			});
+			delete this.mailBox[obj.messageId];
+			return this;
+		}
 		switch (obj.type) {
 			case -2: // Actor Exit
 				break;
 			case -1: // Actor Error
 				break;
 			case 0: // TRX
-				this.emit.apply(this, ["message", obj.sender, obj.value, obj.type]);
+				this.emit.apply(this, ["message", obj.messageId, obj.sender, obj.value, obj.type]);
 				break;
 			case 1: // NOR
-				this.emit.apply(this, ["message", null, obj.value, obj.type]);
+				this.emit.apply(this, ["message", obj.messageId, null, obj.value, obj.type]);
 				break;
 			case 2: // REQ
-				this.emit.apply(this, ["request", obj.sender, obj.value, obj.type]);
+				this.emit.apply(this, ["request", obj.messageId, obj.sender, obj.value, obj.type]);
 				break;
 			case 3: // DIE
-				this.emit.apply(this, ["die", obj.sender, obj.value, obj.type]);
+				this.emit.apply(this, ["die", obj.messageId, obj.sender, obj.value, obj.type]);
 				break;
 			case 4: // CMP
-				this.emit.apply(this, ["ping", obj.sender, obj.value, obj.type]);
+				this.emit.apply(this, ["ping", obj.messageId, obj.sender, obj.value, obj.type]);
 				break;
 			case 5: // CMD
-				this.emit.apply(this, ["command", obj.sender, obj.value, obj.type]);
+				this.emit.apply(this, ["command", obj.messageId, obj.sender, obj.value, obj.type]);
+				break;
+			case 6: // SPN
+				this.emit.apply(this, ["spawn", obj.messageId, obj.sender, obj.value, obj.type]);
+				break;
+			case 7: // TUB
+				this.emit.apply(this, ["tube", obj.messageId, obj.sender, obj.value, obj.type]);
 				break;
 			default:
-				this.emit.apply(this, ["unknown", obj.sender, obj.value, obj.type]);
+				this.emit.apply(this, ["unknown", obj.messageId, obj.sender, obj.value, obj.type]);
 				break;
 		}
 		return this;
@@ -75,6 +97,19 @@ var wrapper = (function (process) {
 		return this;
 	};
 
+	Wrapper.prototype.spawn = function (wractor, path, callback) {
+		this.send("master", {
+			wractor: wractor,
+			path   : path
+		}, 6);
+		this.children.push(wractor);
+		return this;
+	};
+
+	Wrapper.prototype.lastMessageId = function () {
+		return this.lastMID;
+	};
+
 	/**
 	 * Tells master to pass this message to the target
 	 * @param target
@@ -83,12 +118,36 @@ var wrapper = (function (process) {
 	 * @returns {*}
 	 */
 	Wrapper.prototype.send = function (target, message, type) {
+		var mId = hexUuid.get();
 		this.process.send(JSON.stringify({
-			sender: this.name,
-			sendee: target,
-			value : message,
-			type  : type || 0
+			messageId: mId,
+			sender   : this.name,
+			sendee   : target,
+			value    : message,
+			type     : type || 0
 		}));
+		this.lastMID = mId;
+		return this;
+	};
+
+	Wrapper.prototype.request = function (target, message, callback) {
+		var mId = hexUuid.get();
+		this.process.send(JSON.stringify({
+			messageId: mId,
+			sender   : this.name,
+			sendee   : target,
+			value    : message,
+			type     : 2
+		}));
+		this.lastMID = mId;
+
+		this.mailBox[mId] = {
+			messageId: mId,
+			message  : message,
+			target   : target,
+			callback : (callback || function () {} )
+		};
+		//this.mailBoxQ.push(mId);
 		return this;
 	};
 
@@ -101,7 +160,7 @@ function init(message) {
 	try {
 		var obj = JSON.parse(message);
 		wrapper.name = obj.name;
-		wrapper.path = obj.path
+		wrapper.path = obj.path;
 		mainFunc = require(obj.path).bind(wrapper); // actor is fetched
 		mainFunc.apply(wrapper, [wrapper, wrapper.name, wrapper.path].concat(__args(arguments)));
 	}

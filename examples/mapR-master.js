@@ -1,11 +1,26 @@
 var tubeJs = require('../index.js');
-var channel = new tubeJs(function(message) {
-	console.log("Master receivd: ", message);
+var channel = new tubeJs(function (tube) {
+	tube.on("message",function (message) {
+		console.log(message);
+	}).on("request",function (message) {
+			console.log(message);
+		}).on("die",function (message) {
+			// DIE a die notification
+			console.log(message);
+		}).on("command",function (message) {
+			// CMD Actor's Command to master
+			console.log(message);
+		}).on("reply",function (message) {
+			console.log(message);
+		}).on("unknown", function (message) {
+			console.log(message);
+		});
 });
 
 channel.spawn("map-actor1", require.resolve("./mapactor.js"));
 channel.spawn("map-actor2", require.resolve("./mapactor.js"));
 channel.spawn("reduce-actor", require.resolve("./reduceactor.js"));
+
 
 setTimeout(function () {
 	channel.of("map-actor1").send("master", TEXT1, function () {
