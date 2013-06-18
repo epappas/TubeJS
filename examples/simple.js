@@ -8,8 +8,8 @@ var rl = readline.createInterface({
 
 console.log("PPID: " + process.pid);
 
-channel.spawn("cliactor1", require.resolve("./cliactor.js"));
-channel.spawn("cliactor2", require.resolve("./cliactor.js"));
+channel.spawn("cliactor1", require.resolve("./simpleactor.js"));
+channel.spawn("cliactor2", require.resolve("./simpleactor.js"));
 
 setTimeout(function () {
 	rl.question("Send to wractor: ", function (answer) {

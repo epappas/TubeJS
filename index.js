@@ -1,1 +1,1 @@
-module.exports = require("./commons/modTube.js");
+module.exports = require("./lib/modTube.js");
