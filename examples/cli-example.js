@@ -162,7 +162,7 @@ function __processQuery(query, callback) {
 flow.on('spawn', function (callback, wractor, file) {
 	channel.spawn(wractor, require.resolve(path.join(pwd, file)));
 	if (typeof callback === "function") {
-		setTimeout(callback, 200);
+		setTimeout(callback, 300);
 	}
 });
 
@@ -171,7 +171,7 @@ flow.on('send', function (callback, sender, target, message) {
 		console.log(messageId + "@" + target);
 	});
 	if (typeof callback === "function") {
-		setTimeout(callback, 200);
+		setTimeout(callback, 300);
 	}
 });
 
@@ -180,7 +180,7 @@ flow.on('rumor', function (callback, target, message) {
 		console.log(messageId);
 	});
 	if (typeof callback === "function") {
-		setTimeout(callback, 200);
+		setTimeout(callback, 300);
 	}
 });
 
@@ -189,7 +189,7 @@ flow.on('query', function (callback, sender, target, query) {
 		console.log(messageId + "@" + target);
 	});
 	if (typeof callback === "function") {
-		setTimeout(callback, 200);
+		setTimeout(callback, 300);
 	}
 });
 
@@ -198,7 +198,7 @@ flow.on('die', function (callback, wractor, reason) {
 		console.log(messageId + "@" + target);
 	});
 	if (typeof callback === "function") {
-		setTimeout(callback, 200);
+		setTimeout(callback, 300);
 	}
 });
 
@@ -207,7 +207,7 @@ flow.on('ping', function (callback, wractor) {
 		console.log(messageId + "@" + target);
 	});
 	if (typeof callback === "function") {
-		setTimeout(callback, 200);
+		setTimeout(callback, 300);
 	}
 });
 
@@ -216,7 +216,7 @@ flow.on('exec', function (callback, wractor, command, args) {
 		console.log(messageId + "@" + target);
 	});
 	if (typeof callback === "function") {
-		setTimeout(callback, 200);
+		setTimeout(callback, 300);
 	}
 });
 
@@ -225,7 +225,7 @@ flow.on('tube', function (callback, inActor, outActor) {
 		console.log(messageId + "@" + target);
 	});
 	if (typeof callback === "function") {
-		setTimeout(callback, 200);
+		setTimeout(callback, 300);
 	}
 });
 
@@ -246,13 +246,13 @@ flow.on('help', function (callback, isError) {
 	}
 
 	if (typeof callback === "function") {
-		setTimeout(callback, 100);
+		setTimeout(callback, 300);
 	}
 });
 
 flow.on('pwd', function (callback) {
 	console.log(pwd);
 	if (typeof callback === "function") {
-		setTimeout(callback, 100);
+		setTimeout(callback, 300);
 	}
 });
