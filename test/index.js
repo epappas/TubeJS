@@ -15,11 +15,11 @@ var channel = new tubeJs(function (tube) {
 			console.log(message);
 		}).on("command",function (message) {
 			// CMD Actor's Command to master
-			console.log(message);
+			//console.log(message);
 		}).on("reply",function (message) {
-			console.log(message);
+			//console.log(message);
 		}).on("unknown", function (message) {
-			console.log(message);
+			//console.log(message);
 		});
 });
 
@@ -49,3 +49,30 @@ channel.of("testee").spawn("tester", require.resolve("./tester.js"), function (m
 		console.log("QUERY: ", message.messageId, message.reply.test, Date.now());
 	});
 });
+
+channel.place("localwractor", function (wractor, name, path) {
+	console.log("LOCAL: ", name);
+	assert.equal(name, "localwractor");
+	
+	wractor.on("message", function (mId, sender, message, type) {
+		console.log("LOCAL: ", message);
+		assert.notEqual(message, null);
+	});
+	wractor.on("request", function (mId, sender, message, type) {
+		wractor.reply(mId, sender, message);
+	});
+	wractor.on("die", function () {
+		process.exit();
+	});
+	wractor.on("ping", function (mId, sender, message, type) {
+		wractor.pong();
+	});
+	wractor.on("command", function (mId, sender, message, type) {
+
+	});
+});
+
+channel.of("localwractor").send("master", "TEST:"+Date.now());
+channel.of("localwractor").send("master", "TEST:"+Date.now());
+
+

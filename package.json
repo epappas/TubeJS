@@ -19,6 +19,9 @@
 		"type": "git",
 		"url" : "git://github.com/BagosGiAr/TubeJS.git"
 	},
+	"scripts": {
+		"test": "node ./test/index.js"
+	},
 	"main"                : "./index.js",
 	"dependencies"        : { },
 	"devDependencies"     : { },
