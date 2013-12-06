@@ -53,13 +53,20 @@ channel.of("testee").spawn("tester", require.resolve("./tester.js"), function (m
 channel.place("localwractor", function (wractor, name, path) {
 	console.log("LOCAL: ", name);
 	assert.equal(name, "localwractor");
-	
+
 	wractor.on("message", function (mId, sender, message, type) {
 		console.log("LOCAL: ", message);
 		assert.notEqual(message, null);
 	});
 	wractor.on("request", function (mId, sender, message, type) {
-		wractor.reply(mId, sender, message);
+		var __sender = sender;
+		var testee = message;
+		process.nextTick(function () {
+			wractor.ping(testee, function (err, message) {
+				console.log(message);
+				process.nextTick(function () { wractor.reply(mId, __sender, { test: 'reply', success: true }); });
+			});
+		});
 	});
 	wractor.on("die", function () {
 		process.exit();
@@ -73,6 +80,6 @@ channel.place("localwractor", function (wractor, name, path) {
 });
 
 channel.of("localwractor").send("master", "TEST:"+Date.now());
-channel.of("localwractor").send("master", "TEST:"+Date.now());
+channel.of("localwractor").query("master", "localwractor");
 
 
