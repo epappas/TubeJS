@@ -13,10 +13,10 @@ Example: <br/>
     var tubeJs = require('tubeJs');
     var channel = new tubeJs();
 
-    channel.spawn("actor1", "/absolute/path/to/actor/module");
-    channel.spawn("actor2", require.resolve("./relative/path/yourActor.js"));
+    channel.spawn("wractor1", "/absolute/path/to/wractor/module");
+    channel.spawn("wractor2", require.resolve("./relative/path/yourWractor.js"));
 
-At yourActor.js:
+At yourWractor.js:
 
     module.exports = function(wractor, name, path) {
     	console.log("CPID: "+ process.pid);
@@ -49,47 +49,81 @@ At yourActor.js:
 		});
     }
 
-Send messages from Master to an actor:
+Send messages from Master to an wractor:
 
-    channel.of("actor1").send("master", "Hello World", function (messageId, target, message) {
+    channel.of("wractor1").send("master", "Hello World", function (messageId, target, message) {
 		// this callback will fire as soon as the wractor will get this message
 	});
 
-Then `actor1` will receive `"Hello World"` as message.
+Then `wractor1` will receive `"Hello World"` as message.
 
 Request/Query actors:
 
-	channel.of("actor1").query("master", "What's the weather like?", function (err, message) {
+	channel.of("wractor1").query("master", "What's the weather like?", function (err, message) {
 		// this callback will fire ass soon as a .reply() will be called
-		// the `message` holds the message.reply of the actor
+		// the `message` holds the message.reply of the wractor
 	});
 
-Ask actor to spawn a new actor as its child:
+Ask wractor to spawn a new wractor as its child:
 
-	channel.of("actor1").spawn("actor3", "path/of/new/wractor.js", function (messageId, target, child) {
-		// will fire as soon as the new actor will be spawned.
+	channel.of("wractor1").spawn("wractor", "path/of/new/wractor.js", function (messageId, target, child) {
+		// will fire as soon as the new wractor will be spawned.
 		// `child` holds the child process
-		// `target` the name of the actor, should be === "actor3"
+		// `target` the name of the wractor, should be === "wractor"
 	});
 
-Ask actor to serve a servable resource like `require('net').createServer()` or a `socket`:
+Ask wractor to serve a servable resource like `require('net').createServer()` or a `socket`:
 
 	var server = require('net').createServer();
 	server.listen(6789, function () {
-		channel.of("actor3").serve("server", server);
+		channel.of("wractor").serve("server", server);
 	});
 	// or
 	server.on('connection', function (socket) {
 		socket.setEncoding("utf8");
 		socket.setNoDelay(true);
 		socket.on('data', function (data) {
-			channel.of("actor3").query("master", data, function (err, message) {
+			channel.of("wractor").query("master", data, function (err, message) {
 				socket.end(message.reply);
 			});
 		});
 		// or
 		channel.of("actor3").serve("socket", socket);
 	});
+
+## Local Wractors
+
+If a Wractor module is implemented with no violations to the prototype structure, it should operate using 
+the `.place()` method localy withoud `.spawn()`ing a new thread. `.place()` creates local wractors operating
+with their own scope, and operate exacly as threaded wractors. As a result a wractor module shouldn't be aware
+either it's spawned or not. This gives the advantage of having runing services within one Node.js instance.
+
+Example of Use:
+
+	channel.place("localwractor", function (wractor, name, path) {
+		console.log("LOCAL: ", name);
+
+		wractor.request("wractor3", "LOCAL QUERY TEST:"+Date.now(), function(err, reply) {
+			console.log("LOCAL REPLY 3: ", reply);
+		});
+
+		wractor.on("message", function (mId, sender, message, type) {
+			console.log("LOCAL MESSAGE: ", message);
+		});
+		wractor.on("request", function (mId, sender, message, type) {
+			wractor.reply(mId, sender, "Hey there");
+		});
+		wractor.on("die", function () {
+			process.exit();
+		});
+		wractor.on("ping", function (mId, sender, message, type) {
+			wractor.pong();
+		});
+		wractor.on("command", function (mId, sender, message, type) {
+
+		});
+	});
+
 
 Feel free to enjoy.
 
