@@ -7,9 +7,9 @@ var channel = new tubeJs(function (tube) {
 		assert.notEqual(message.messageId, null);
 		assert.notEqual(message.value, null);
 		assert.equal(message.value.success, true);
-		console.log("REPORT: ", message.messageId, message.value.test, Date.now());
+		console.log("MASTER REPORT: ", message.messageId, message.value.test, Date.now());
 	}).on("request",function (message) {
-			console.log(message);
+			console.log("MASTER REQ REPORT: ", message);
 		}).on("die",function (message) {
 			// DIE a die notification
 			console.log(message);
@@ -39,14 +39,14 @@ channel.of("testee").spawn("tester", require.resolve("./tester.js"), function (m
 		assert.equal(message.type, 0);
 		assert.equal(message.sendee, "testee");
 		assert.equal(message.value, "tester");
-		console.log("SEND:", message.messageId, message.value, Date.now());
+		console.log("TESTEE SEND:", message.messageId, message.value, Date.now());
 	});
 
 	channel.of("tester").query("master", "testee", function (err, message) {
 		assert.notEqual(message, null);
 		assert.equal(message.target, "tester");
 		assert.deepEqual(message.reply, { test: 'reply', success: true });
-		console.log("QUERY: ", message.messageId, message.reply.test, Date.now());
+		console.log("TESTER REPLY: ", message.messageId, message.reply.test, Date.now());
 	});
 });
 
@@ -54,18 +54,21 @@ channel.place("localwractor", function (wractor, name, path) {
 	console.log("LOCAL: ", name);
 	assert.equal(name, "localwractor");
 
+	wractor.request("localwractor", "LOCAL QUERY TEST:"+Date.now(), function(err, reply) {
+		assert.equal(err, null);
+		assert.notEqual(reply, null);
+		console.log("LOCAL REPLY 3: ", reply);
+	});
+
 	wractor.on("message", function (mId, sender, message, type) {
-		console.log("LOCAL: ", message);
+		console.log("LOCAL MESSAGE: ", message);
 		assert.notEqual(message, null);
 	});
 	wractor.on("request", function (mId, sender, message, type) {
 		var __sender = sender;
-		var testee = message;
+		console.log("LOCAL REQUEST: ", mId, sender, message);
 		process.nextTick(function () {
-			wractor.ping(testee, function (err, message) {
-				console.log(message);
-				process.nextTick(function () { wractor.reply(mId, __sender, { test: 'reply', success: true }); });
-			});
+			wractor.reply(mId, __sender, { test: 'local reply', success: true });
 		});
 	});
 	wractor.on("die", function () {
@@ -79,7 +82,16 @@ channel.place("localwractor", function (wractor, name, path) {
 	});
 });
 
-channel.of("localwractor").send("master", "TEST:"+Date.now());
-channel.of("localwractor").query("master", "localwractor");
+channel.of("localwractor").send("master", "LOCAL TEST:"+Date.now());
+channel.of("localwractor").query("localwractor", "LOCAL QUERY TEST:"+Date.now(), function(err, reply) {
+	assert.equal(err, null);
+	assert.notEqual(reply, null);
+	console.log("LOCAL REPLY 1: ", reply);
+});
+channel.of("localwractor").query("master", "LOCAL QUERY TEST:"+Date.now(), function(err, reply) {
+	assert.equal(err, null);
+	assert.notEqual(reply, null);
+	console.log("LOCAL REPLY 2: ", reply);
+});
 
 

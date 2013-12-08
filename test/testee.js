@@ -23,4 +23,6 @@ module.exports = function (wractor, name, path) {
 	wractor.on("command", function (mId, sender, message, type) {
 
 	});
+
+	
 };
