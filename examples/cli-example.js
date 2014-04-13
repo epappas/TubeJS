@@ -12,19 +12,19 @@ var i = rl.createInterface(process.stdin, process.stdout, null);
 
 var channel = new tubeJs(function (tube) {
 	tube.on("message",function (message) {
-		console.log(message);
+		// console.log(message);
 	}).on("request",function (message) {
-			console.log(message);
+			// console.log(message);
 		}).on("die",function (message) {
 			// DIE a die notification
 			console.log(message);
 		}).on("command",function (message) {
 			// CMD Actor's Command to master
-			console.log(message);
+			// console.log(message);
 		}).on("reply",function (message) {
-			console.log(message);
+			// console.log(message);
 		}).on("unknown", function (message) {
-			console.log(message);
+			// console.log(message);
 		});
 });
 
@@ -44,6 +44,15 @@ process.nextTick((function main() {
 			description: "\t\t\t\tSpawns a new actor with the given path.",
 			func       : function (callback, wractor, path) {
 				flow.emit("spawn", callback, wractor, path);
+			}
+		},
+		place: {
+			name       : "PLACE",
+			minArgs    : 3,
+			argDesc    : "<name> <path>",
+			description: "\t\t\t\tStarts a new actor with the given path, running within the same thread.",
+			func       : function (callback, wractor, path) {
+				flow.emit("place", callback, wractor, path);
 			}
 		},
 		send : {
@@ -136,7 +145,7 @@ process.nextTick((function main() {
 				flow.emit("pwd", callback);
 			}
 		}
-	}
+	};
 })();
 
 function __processQuery(query, callback) {
@@ -161,6 +170,13 @@ function __processQuery(query, callback) {
 
 flow.on('spawn', function (callback, wractor, file) {
 	channel.spawn(wractor, require.resolve(path.join(pwd, file)));
+	if (typeof callback === "function") {
+		setTimeout(callback, 300);
+	}
+});
+
+flow.on('place', function (callback, wractor, file) {
+	channel.place(wractor, require(path.join(pwd, file)));
 	if (typeof callback === "function") {
 		setTimeout(callback, 300);
 	}
